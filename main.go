@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/cli/go-gh/v2/pkg/api"
+	"github.com/cli/go-gh/v2/pkg/repository"
 )
 
 type Author struct {
@@ -46,22 +47,106 @@ type GraphQLResponse struct {
 	Repository Repository `json:"repository"`
 }
 
+type PullRequestItem struct {
+	Number int `json:"number"`
+}
+
+func usage() {
+	fmt.Println("Usage: gh-unresolved-comments [flags] <PR_URL | PR_NUMBER | BRANCH>")
+	fmt.Println()
+	fmt.Println("Flags:")
+	fmt.Println("  -R, --repo [HOST/]OWNER/REPO   Select another repository using the [HOST/]OWNER/REPO format")
+	fmt.Println()
+	fmt.Println("Examples:")
+	fmt.Println("  gh-unresolved-comments https://github.com/owner/repo/pull/123")
+	fmt.Println("  gh-unresolved-comments 123")
+	fmt.Println("  gh-unresolved-comments my-feature-branch")
+	fmt.Println("  gh-unresolved-comments -R owner/repo 123")
+	fmt.Println("  gh-unresolved-comments --repo owner/repo my-feature-branch")
+}
+
 func main() {
-	if len(os.Args) < 2 {
-		fmt.Println("Usage: gh-unresolved-comments <PR_URL>")
+	args := os.Args[1:]
+
+	if len(args) == 0 {
+		usage()
 		os.Exit(1)
 	}
 
-	prURL := os.Args[1]
-	owner, repo, prNumber, err := parsePRURL(prURL)
-	if err != nil {
-		fmt.Printf("Error: %v\n", err)
+	// -R / --repo フラグのパース
+	var repoFlag string
+	var remaining []string
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "-R", "--repo":
+			if i+1 >= len(args) {
+				fmt.Fprintf(os.Stderr, "Error: %s requires an argument\n", args[i])
+				os.Exit(1)
+			}
+			repoFlag = args[i+1]
+			i++
+		default:
+			remaining = append(remaining, args[i])
+		}
+	}
+
+	if len(remaining) == 0 {
+		usage()
 		os.Exit(1)
+	}
+
+	arg := remaining[0]
+
+	var owner, repo string
+	var prNumber int
+
+	// PR URLかどうか判定
+	if strings.HasPrefix(arg, "http://") || strings.HasPrefix(arg, "https://") {
+		var err error
+		owner, repo, prNumber, err = parsePRURL(arg)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+	} else {
+		// リポジトリの特定
+		var ghRepo repository.Repository
+		if repoFlag != "" {
+			var err error
+			ghRepo, err = repository.Parse(repoFlag)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error parsing --repo: %v\n", err)
+				os.Exit(1)
+			}
+		} else {
+			var err error
+			ghRepo, err = repository.Current()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error determining current repository: %v\n", err)
+				fmt.Fprintf(os.Stderr, "Use -R / --repo to specify a repository.\n")
+				os.Exit(1)
+			}
+		}
+		owner = ghRepo.Owner
+		repo = ghRepo.Name
+
+		// PR番号かブランチ名かを判定
+		if n, err := strconv.Atoi(arg); err == nil {
+			prNumber = n
+		} else {
+			// ブランチ名からPR番号を取得
+			var err error
+			prNumber, err = getPRNumberFromBranch(owner, repo, arg)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				os.Exit(1)
+			}
+		}
 	}
 
 	client, err := api.DefaultGraphQLClient()
 	if err != nil {
-		fmt.Printf("Error creating GraphQL client: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error creating GraphQL client: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -96,7 +181,7 @@ func main() {
 	var response GraphQLResponse
 	err = client.Do(query, variables, &response)
 	if err != nil {
-		fmt.Printf("Error executing GraphQL query: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error executing GraphQL query: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -177,4 +262,23 @@ func parsePRURL(prURL string) (string, string, int, error) {
 	}
 
 	return owner, repo, prNumber, nil
+}
+
+func getPRNumberFromBranch(owner, repo, branch string) (int, error) {
+	client, err := api.DefaultRESTClient()
+	if err != nil {
+		return 0, fmt.Errorf("creating REST client: %w", err)
+	}
+
+	var prs []PullRequestItem
+	err = client.Get(fmt.Sprintf("repos/%s/%s/pulls?head=%s:%s&state=open", owner, repo, owner, branch), &prs)
+	if err != nil {
+		return 0, fmt.Errorf("fetching PRs for branch %q: %w", branch, err)
+	}
+
+	if len(prs) == 0 {
+		return 0, fmt.Errorf("no open pull request found for branch %q in %s/%s", branch, owner, repo)
+	}
+
+	return prs[0].Number, nil
 }
