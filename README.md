@@ -4,7 +4,7 @@ GitHub Pull Request の未解決レビューコメントを一覧表示するツ
 
 ## 概要
 
-指定した PR の未解決（Unresolved）レビュースレッドを取得し、概要テーブルと詳細をMarkdown形式で標準出力に表示します。
+指定した PR の未解決（Unresolved）レビュースレッドを取得し、テーブル形式（デフォルト）または Markdown 形式で標準出力に表示します。
 
 ## インストール
 
@@ -38,6 +38,7 @@ gh-unresolved-comments [flags] <PR_URL | PR_NUMBER | BRANCH>
 | フラグ | 説明 |
 |--------|------|
 | `-R`, `--repo [HOST/]OWNER/REPO` | リポジトリを明示的に指定します |
+| `--markdown` | Markdown 形式で出力します（デフォルト: テーブル形式） |
 
 ### 引数
 
@@ -66,7 +67,14 @@ $ gh-unresolved-comments -R owner/repo 123
 $ gh-unresolved-comments --repo owner/repo my-feature-branch
 ```
 
-### 出力例
+### 出力例（テーブル形式・デフォルト）
+
+```
+#  URL                              日付        ファイル  内容
+1  https://github.com/.../pull/...  2024-01-15  main.go   コメントの内容...
+```
+
+### 出力例（Markdown 形式・`--markdown` 指定時）
 
 ```
 ## 概要

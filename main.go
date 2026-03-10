@@ -9,6 +9,8 @@ import (
 
 	"github.com/cli/go-gh/v2/pkg/api"
 	"github.com/cli/go-gh/v2/pkg/repository"
+	"github.com/cli/go-gh/v2/pkg/tableprinter"
+	"github.com/cli/go-gh/v2/pkg/term"
 )
 
 type Author struct {
@@ -56,6 +58,7 @@ func usage() {
 	fmt.Println()
 	fmt.Println("Flags:")
 	fmt.Println("  -R, --repo [HOST/]OWNER/REPO   Select another repository using the [HOST/]OWNER/REPO format")
+	fmt.Println("  --markdown                     Output in Markdown format (default: table format)")
 	fmt.Println()
 	fmt.Println("Examples:")
 	fmt.Println("  gh-unresolved-comments https://github.com/owner/repo/pull/123")
@@ -73,8 +76,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	// -R / --repo フラグのパース
+	// フラグのパース
 	var repoFlag string
+	var markdownMode bool
 	var remaining []string
 	for i := 0; i < len(args); i++ {
 		switch args[i] {
@@ -85,6 +89,8 @@ func main() {
 			}
 			repoFlag = args[i+1]
 			i++
+		case "--markdown":
+			markdownMode = true
 		default:
 			remaining = append(remaining, args[i])
 		}
@@ -198,6 +204,50 @@ func main() {
 		return
 	}
 
+	if markdownMode {
+		printMarkdown(unresolvedThreads)
+	} else {
+		printTable(unresolvedThreads)
+	}
+}
+
+func summarizeBody(body string) string {
+	body = strings.ReplaceAll(body, "\r\n", " ")
+	body = strings.ReplaceAll(body, "\n", " ")
+	body = strings.ReplaceAll(body, "\r", "")
+	runes := []rune(body)
+	if len(runes) > 150 {
+		return string(runes[:150]) + "..."
+	}
+	return body
+}
+
+func printTable(unresolvedThreads []ReviewThread) {
+	terminal := term.FromEnv()
+	isTTY := terminal.IsTerminalOutput()
+	width, _, _ := terminal.Size()
+	if width <= 0 {
+		width = 120
+	}
+
+	tp := tableprinter.New(os.Stdout, isTTY, width)
+	tp.AddField("#")
+	tp.AddField("URL")
+	tp.AddField("内容")
+	tp.EndRow()
+
+	for i, thread := range unresolvedThreads {
+		firstComment := thread.Comments.Nodes[0]
+		tp.AddField(strconv.Itoa(i + 1))
+		tp.AddField(firstComment.URL, tableprinter.WithTruncate(nil))
+		tp.AddField(summarizeBody(firstComment.Body))
+		tp.EndRow()
+	}
+
+	_ = tp.Render()
+}
+
+func printMarkdown(unresolvedThreads []ReviewThread) {
 	// 概要の出力
 	fmt.Printf("## 概要\n\n")
 	fmt.Println("| # | URL | 日付 | ファイル | 内容 |")
@@ -211,15 +261,7 @@ func main() {
 			createdAt = firstComment.CreatedAt[:10]
 		}
 		path := firstComment.Path
-		body := strings.ReplaceAll(firstComment.Body, "\r\n", " ")
-		body = strings.ReplaceAll(body, "\n", " ")
-		body = strings.ReplaceAll(body, "\r", "")
-		summary := body
-		runes := []rune(body)
-		if len(runes) > 150 {
-			summary = string(runes[:150]) + "..."
-		}
-		fmt.Printf("| %d | %s | %s | %s | %s |\n", i+1, url, createdAt, path, summary)
+		fmt.Printf("| %d | %s | %s | %s | %s |\n", i+1, url, createdAt, path, summarizeBody(firstComment.Body))
 	}
 
 	fmt.Printf("\n---\n\n")
