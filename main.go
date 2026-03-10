@@ -275,14 +275,14 @@ func printMarkdown(unresolvedThreads []ReviewThread) {
 	fmt.Printf("\n---\n\n")
 
 	// 各スレッドの詳細
-	fmt.Printf("## 未解決コメント\n\n")
+	fmt.Printf("## 未解決スレッド\n\n")
 	for i, thread := range unresolvedThreads {
 		firstComment := thread.Comments.Nodes[0]
 		path := firstComment.Path
 		url := firstComment.URL
 
-		fmt.Printf("### %d. 未解決のスレッド: %s\n", i+1, path)
-		fmt.Printf("URL: %s\n\n", url)
+		fmt.Printf("### スレッド%d: %s\n", i+1, path)
+		fmt.Printf("%s\n\n", url)
 
 		for _, comment := range thread.Comments.Nodes {
 			author := comment.Author.Login
