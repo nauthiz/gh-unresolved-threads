@@ -55,18 +55,18 @@ type PullRequestItem struct {
 }
 
 func usage() {
-	fmt.Println("Usage: gh-unresolved-comments [flags] <PR_URL | PR_NUMBER | BRANCH>")
+	fmt.Println("Usage: gh-unresolved-threads [flags] <PR_URL | PR_NUMBER | BRANCH>")
 	fmt.Println()
 	fmt.Println("Flags:")
 	fmt.Println("  -R, --repo [HOST/]OWNER/REPO   Select another repository using the [HOST/]OWNER/REPO format")
 	fmt.Println("  --markdown                     Output in Markdown format (default: table format)")
 	fmt.Println()
 	fmt.Println("Examples:")
-	fmt.Println("  gh-unresolved-comments https://github.com/owner/repo/pull/123")
-	fmt.Println("  gh-unresolved-comments 123")
-	fmt.Println("  gh-unresolved-comments my-feature-branch")
-	fmt.Println("  gh-unresolved-comments -R owner/repo 123")
-	fmt.Println("  gh-unresolved-comments --repo owner/repo my-feature-branch")
+	fmt.Println("  gh-unresolved-threads https://github.com/owner/repo/pull/123")
+	fmt.Println("  gh-unresolved-threads 123")
+	fmt.Println("  gh-unresolved-threads my-feature-branch")
+	fmt.Println("  gh-unresolved-threads -R owner/repo 123")
+	fmt.Println("  gh-unresolved-threads --repo owner/repo my-feature-branch")
 }
 
 func main() {
@@ -259,18 +259,17 @@ func printTable(unresolvedThreads []ReviewThread) {
 func printMarkdown(unresolvedThreads []ReviewThread) {
 	// 概要の出力
 	fmt.Printf("## 概要\n\n")
-	fmt.Println("| # | URL | 日付 | ファイル | 内容 |")
-	fmt.Println("|---|-----|------|----------|------|")
+	fmt.Println("| # | 投稿者 | URL | 内容 |")
+	fmt.Println("|---|--------|-----|------|")
 
 	for i, thread := range unresolvedThreads {
 		firstComment := thread.Comments.Nodes[0]
 		url := firstComment.URL
-		createdAt := ""
-		if len(firstComment.CreatedAt) >= 10 {
-			createdAt = firstComment.CreatedAt[:10]
+		author := firstComment.Author.Login
+		if author == "" {
+			author = "unknown"
 		}
-		path := firstComment.Path
-		fmt.Printf("| %d | %s | %s | %s | %s |\n", i+1, url, createdAt, path, summarizeBody(firstComment.Body))
+		fmt.Printf("| %d | %s | %s | %s |\n", i+1, author, url, summarizeBody(firstComment.Body))
 	}
 
 	fmt.Printf("\n---\n\n")

@@ -1,4 +1,4 @@
-module github.com/pipedbits-dev/gh-unresolved-comments
+module github.com/pipedbits-dev/gh-unresolved-threads
 
 go 1.25.0
 

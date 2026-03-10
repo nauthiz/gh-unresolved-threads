@@ -1,6 +1,6 @@
-# gh-unresolved-comments
+# gh-unresolved-threads
 
-GitHub Pull Request の未解決レビューコメントを一覧表示するツールです。
+GitHub Pull Request の未解決レビュースレッドを一覧表示するツールです。
 
 ## 概要
 
@@ -16,12 +16,12 @@ GitHub Pull Request の未解決レビューコメントを一覧表示するツ
 ### ビルド
 
 ```bash
-$ git clone https://github.com/nauthiz/gh-unresolved-comments.git
-$ cd gh-unresolved-comments
-$ go build -o gh-unresolved-comments .
+$ git clone https://github.com/nauthiz/gh-unresolved-threads.git
+$ cd gh-unresolved-threads
+$ go build -o gh-unresolved-threads .
 ```
 
-ビルドされた `gh-unresolved-comments` をインストール。
+ビルドされた `gh-unresolved-threads` をインストール。
 
 ```bash
 $ gh extension install .
@@ -30,7 +30,7 @@ $ gh extension install .
 ## 使い方
 
 ```
-gh-unresolved-comments [flags] <PR_URL | PR_NUMBER | BRANCH>
+gh-unresolved-threads [flags] <PR_URL | PR_NUMBER | BRANCH>
 ```
 
 ### フラグ
@@ -52,26 +52,29 @@ gh-unresolved-comments [flags] <PR_URL | PR_NUMBER | BRANCH>
 
 ```bash
 # PR URL で指定
-$ gh-unresolved-comments https://github.com/owner/repo/pull/123
+$ gh-unresolved-threads https://github.com/owner/repo/pull/123
 
 # PR 番号で指定（カレントディレクトリのリポジトリを自動検出）
-$ gh-unresolved-comments 123
+$ gh-unresolved-threads 123
 
 # ブランチ名で指定（カレントディレクトリのリポジトリを自動検出）
-$ gh-unresolved-comments my-feature-branch
+$ gh-unresolved-threads my-feature-branch
 
 # --repo でリポジトリを明示して PR 番号を指定
-$ gh-unresolved-comments -R owner/repo 123
+$ gh-unresolved-threads -R owner/repo 123
 
 # --repo でリポジトリを明示してブランチ名を指定
-$ gh-unresolved-comments --repo owner/repo my-feature-branch
+$ gh-unresolved-threads --repo owner/repo my-feature-branch
 ```
 
 ### 出力例（テーブル形式・デフォルト）
 
 ```
-#  URL                              日付        ファイル  内容
-1  https://github.com/.../pull/...  2024-01-15  main.go   コメントの内容...
+1  https://github.com/.../pull/...#discussion_r...
+   コメントの内容...
+
+2  https://github.com/.../pull/...#discussion_r...
+   別のコメントの内容...
 ```
 
 ### 出力例（Markdown 形式・`--markdown` 指定時）
@@ -79,9 +82,9 @@ $ gh-unresolved-comments --repo owner/repo my-feature-branch
 ```
 ## 概要
 
-| # | URL | 日付 | ファイル | 内容 |
-|---|-----|------|----------|------|
-| 1 | https://github.com/... | 2024-01-15 | main.go | コメントの内容... |
+| # | 投稿者 | URL | 内容 |
+|---|--------|-----|------|
+| 1 | reviewer | https://github.com/... | コメントの内容... |
 
 ---
 
