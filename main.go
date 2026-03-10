@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/cli/go-gh/v2/pkg/api"
 	"github.com/cli/go-gh/v2/pkg/repository"
 	"github.com/cli/go-gh/v2/pkg/tableprinter"
@@ -216,8 +217,8 @@ func summarizeBody(body string) string {
 	body = strings.ReplaceAll(body, "\n", " ")
 	body = strings.ReplaceAll(body, "\r", "")
 	runes := []rune(body)
-	if len(runes) > 150 {
-		return string(runes[:150]) + "..."
+	if len(runes) > 300 {
+		return string(runes[:300]) + "..."
 	}
 	return body
 }
@@ -230,18 +231,26 @@ func printTable(unresolvedThreads []ReviewThread) {
 		width = 120
 	}
 
+	urlStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("12")).Underline(true)
+	if !isTTY {
+		urlStyle = lipgloss.NewStyle()
+	}
+
 	tp := tableprinter.New(os.Stdout, isTTY, width)
-	tp.AddField("#")
-	tp.AddField("URL")
-	tp.AddField("内容")
-	tp.EndRow()
 
 	for i, thread := range unresolvedThreads {
 		firstComment := thread.Comments.Nodes[0]
 		tp.AddField(strconv.Itoa(i + 1))
-		tp.AddField(firstComment.URL, tableprinter.WithTruncate(nil))
+		tp.AddField(urlStyle.Render(firstComment.URL), tableprinter.WithTruncate(nil))
+		tp.EndRow()
+		tp.AddField("")
 		tp.AddField(summarizeBody(firstComment.Body))
 		tp.EndRow()
+		if i < len(unresolvedThreads)-1 {
+			tp.AddField("")
+			tp.AddField("")
+			tp.EndRow()
+		}
 	}
 
 	_ = tp.Render()
